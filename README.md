@@ -10,6 +10,3 @@ This is a simple addon that adds After-Effects-like hotkeys for moving keyframes
 
 ### Installation
 Just ![download](https://github.com/karmaral/shift-keyframes/releases/download/v1.0/shift_keyframes.py) the .py file and install it like any other addon.
-
-#### Known Bugs
-Movement is only applied to the keyframe point, but its handles are left behind. I'll patch this shortly.
