@@ -17,7 +17,7 @@ bl_info = {
     "name": "Shift Keyframes",
     "description": "Shift keyframes left/right via hotkeys",
     "author": "Amaral Krichman",
-    "version": (1, 0),
+    "version": (1, 0, 1),
     "blender": (2, 80, 0),
     "location": "Dopesheet/Graph Editor > Key > Transform",
     "warning": "",
