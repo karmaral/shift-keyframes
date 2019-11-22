@@ -1,4 +1,4 @@
-# Shift Keyframes v1.0
+# Shift Keyframes v1.0.1
 This is a simple addon that adds After-Effects-like hotkeys for moving keyframes around quickly in the timeline.
 
 ### Hotkeys
@@ -7,6 +7,7 @@ This is a simple addon that adds After-Effects-like hotkeys for moving keyframes
 
 ![](demo.gif)
 
-
 ### Installation
 Just ![download](https://github.com/karmaral/shift-keyframes/releases/download/v1.0/shift_keyframes.py) the .py file and install it like any other addon.
+
+#### ![Changelog](CHANGELOG.md)
