@@ -8,6 +8,6 @@ This is a simple addon that adds After-Effects-like hotkeys for moving keyframes
 ![](demo.gif)
 
 ### Installation
-Just ![download](https://github.com/karmaral/shift-keyframes/releases) the .py file and install it like any other addon.
+Just [download](https://github.com/karmaral/shift-keyframes/releases) the .py file and install it like any other addon.
 
-#### ![Changelog](CHANGELOG.md)
+#### [Changelog](CHANGELOG.md)
