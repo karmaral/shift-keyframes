@@ -17,7 +17,7 @@ bl_info = {
     "name": "Shift Keyframes",
     "description": "Shift keyframes left/right via hotkeys",
     "author": "Amaral Krichman",
-    "version": (1, 0, 1),
+    "version": (1, 1, 0),
     "blender": (2, 80, 0),
     "location": "Dopesheet/Graph Editor > Key > Transform",
     "warning": "",
@@ -35,15 +35,22 @@ class GRAPH_OT_keyframe_shift(bpy.types.Operator):
     bl_options = {'REGISTER', 'UNDO', 'INTERNAL'}
     
     #| n of frames to shift | direction to shift them | direction axis (x or y)
-    distance: bpy.props.IntProperty(default=1)
-    backwards: bpy.props.BoolProperty(default=False)
-    axis: bpy.props.BoolProperty(default=False)
+    distance: bpy.props.IntProperty(name="Distance", default=1)
+    backwards: bpy.props.BoolProperty(name="Backwards", default=False)
+    axis: bpy.props.BoolProperty(name="Shift Values instead", default=False)
+    vse: bpy.props.BoolProperty(name="VSE Context", default=False)
+    
     
     selected = [] 
     
     @classmethod
     def poll(cls, context):
-       return context.area.type in {'DOPESHEET_EDITOR', 'GRAPH_EDITOR'}
+        # add VSE
+        if context.preferences.addons[__name__].preferences.global_polling:
+            return context.area.type in {'DOPESHEET_EDITOR', 'GRAPH_EDITOR', 'VIEW_3D'}
+        else:
+            return context.area.type in {'DOPESHEET_EDITOR', 'GRAPH_EDITOR'}
+    
        
     def fetch_selected(self):
         self.selected.clear()
@@ -53,13 +60,18 @@ class GRAPH_OT_keyframe_shift(bpy.types.Operator):
                     if key.select_control_point == True:
                         self.selected.append(key)
                         
-    #vertical dimension, dormant for now
+
     def move(self, amount, reverse, axis):
-        self.ax = int(axis)
+        vmode = bpy.context.preferences.addons[__name__].preferences.vertical_mode
+        if vmode == 'ON':
+            self.ax = int(axis)
+        else:   
+            self.ax = 0
+            
         for k in self.selected:    
             if not reverse:
                 k.co[self.ax] += amount
-                if axis:
+                if axis and vmode == 'ON':
                     k.handle_left.y += amount
                     k.handle_right.y += amount
                 else:
@@ -67,7 +79,7 @@ class GRAPH_OT_keyframe_shift(bpy.types.Operator):
                     k.handle_right.x += amount             
             else:
                 k.co[self.ax] -= amount
-                if axis:
+                if axis and vmode == 'ON':
                     k.handle_left.y -= amount
                     k.handle_right.y -= amount
                 else:
@@ -107,13 +119,32 @@ class GRAPH_MT_keyframe_shift(bpy.types.Menu):
         l10.distance = 10
 
 
+class ShiftKeyframesPreferences(bpy.types.AddonPreferences):
+    bl_idname = __name__
+    
+    global_polling: bpy.props.BoolProperty(default=True)
+    vertical_mode: bpy.props.EnumProperty(items=[
+                                                ('OFF', "Disabled", "", "", 0),
+                                                ("ON", "Enabled (experimental)", "", 'ERROR', 1)],
+                                                name="Vertical Mode", default='OFF')
+    
+    
+    def draw(self, context):
+        layout = self.layout
+        row = layout.row()
+        row.prop(self, "global_polling", text="Allow calling the operator in 3D View")
+        layout.label(text="Vertical Mode (shift keyframe values too)")
+        row = layout.row()
+        row.prop(self, "vertical_mode", text="Vertical Mode", expand=True)
+    
+
 #---------------------Registration---------------------
 
 def add_menu(self, _context):
     self.layout.menu(GRAPH_MT_keyframe_shift.bl_idname) 
 
 addon_keymaps = []
-classes = (GRAPH_OT_keyframe_shift, GRAPH_MT_keyframe_shift)
+classes = (GRAPH_OT_keyframe_shift, GRAPH_MT_keyframe_shift, ShiftKeyframesPreferences)
 
 
 
@@ -128,15 +159,17 @@ def register():
     kc = bpy.context.window_manager.keyconfigs.addon
     km_1 = kc.keymaps.new(name='Graph Editor', space_type='GRAPH_EDITOR')
     km_2 = kc.keymaps.new(name='Dopesheet', space_type='DOPESHEET_EDITOR')
+    km_3 = kc.keymaps.new(name='3D View', space_type='VIEW_3D')
     
     idname = GRAPH_OT_keyframe_shift.bl_idname
     
-    #Graph
+    
+    #Graph------------------------
     kmi_1_R = km_1.keymap_items.new(idname, 'RIGHT_ARROW', 'PRESS', alt=True)
     kmi_1_R.properties.distance = 1    
     kmi_1_R.properties.backwards = False
     kmi_1_R.properties.axis = False
-    
+
     kmi_1_RR = km_1.keymap_items.new(idname, 'RIGHT_ARROW', 'PRESS', shift=True, alt=True)
     kmi_1_RR.properties.distance = 10
     kmi_1_RR.properties.backwards = False
@@ -152,28 +185,28 @@ def register():
     kmi_1_LL.properties.backwards = True
     kmi_1_LL.properties.axis = False
     
-#    kmi_1_U = km_2.keymap_items.new(idname, 'UP_ARROW', 'PRESS', alt=True)
-#    kmi_1_U.properties.distance = 1
-#    kmi_1_U.properties.backwards = False
-#    kmi_1_U.properties.axis = True
-#    
-#    kmi_1_UU = km_2.keymap_items.new(idname, 'UP_ARROW', 'PRESS', shift=True, alt=True)
-#    kmi_1_UU.properties.distance = 10
-#    kmi_1_UU.properties.backwards = False
-#    kmi_1_UU.properties.axis = True
-#    
-#    kmi_1_D = km_2.keymap_items.new(idname, 'DOWN_ARROW', 'PRESS', alt=True)
-#    kmi_1_D.properties.distance = 1
-#    kmi_1_D.properties.backwards = True
-#    kmi_1_D.properties.axis = True
-#    
-#    kmi_1_DD = km_2.keymap_items.new(idname, 'DOWN_ARROW', 'PRESS', shift=True, alt=True)
-#    kmi_1_DD.properties.distance = 10
-#    kmi_1_DD.properties.backwards = True
-#    kmi_1_DD.properties.axis = True
+    kmi_1_U = km_1.keymap_items.new(idname, 'UP_ARROW', 'PRESS', alt=True)
+    kmi_1_U.properties.distance = 1
+    kmi_1_U.properties.backwards = False
+    kmi_1_U.properties.axis = True
+    
+    kmi_1_UU = km_1.keymap_items.new(idname, 'UP_ARROW', 'PRESS', shift=True, alt=True)
+    kmi_1_UU.properties.distance = 10
+    kmi_1_UU.properties.backwards = False
+    kmi_1_UU.properties.axis = True
+    
+    kmi_1_D = km_1.keymap_items.new(idname, 'DOWN_ARROW', 'PRESS', alt=True)
+    kmi_1_D.properties.distance = 1
+    kmi_1_D.properties.backwards = True
+    kmi_1_D.properties.axis = True
+    
+    kmi_1_DD = km_1.keymap_items.new(idname, 'DOWN_ARROW', 'PRESS', shift=True, alt=True)
+    kmi_1_DD.properties.distance = 10
+    kmi_1_DD.properties.backwards = True
+    kmi_1_DD.properties.axis = True
     
     
-    #Dope
+    #Dopesheet------------------------
     kmi_2_R = km_2.keymap_items.new(idname, 'RIGHT_ARROW', 'PRESS', alt=True)
     kmi_2_R.properties.distance = 1
     kmi_2_R.properties.backwards = False
@@ -194,29 +227,69 @@ def register():
     kmi_2_LL.properties.backwards = True
     kmi_2_LL.properties.axis = False
     
-#    kmi_2_U = km_2.keymap_items.new(idname, 'UP_ARROW', 'PRESS', alt=True)
-#    kmi_2_U.properties.distance = 1
-#    kmi_2_U.properties.backwards = False
-#    kmi_2_U.properties.axis = True
-#    
-#    kmi_2_UU = km_2.keymap_items.new(idname, 'UP_ARROW', 'PRESS', shift=True, alt=True)
-#    kmi_2_UU.properties.distance = 10
-#    kmi_2_UU.properties.backwards = False
-#    kmi_2_UU.properties.axis = True
-#    
-#    kmi_2_D = km_2.keymap_items.new(idname, 'DOWN_ARROW', 'PRESS', alt=True)
-#    kmi_2_D.properties.distance = 1
-#    kmi_2_D.properties.backwards = True
-#    kmi_2_D.properties.axis = True
-#    
-#    kmi_2_DD = km_2.keymap_items.new(idname, 'DOWN_ARROW', 'PRESS', shift=True, alt=True)
-#    kmi_2_DD.properties.distance = 10
-#    kmi_2_DD.properties.backwards = True
-#    kmi_2_DD.properties.axis = True
+    kmi_2_U = km_2.keymap_items.new(idname, 'UP_ARROW', 'PRESS', alt=True)
+    kmi_2_U.properties.distance = 1
+    kmi_2_U.properties.backwards = False
+    kmi_2_U.properties.axis = True
     
+    kmi_2_UU = km_2.keymap_items.new(idname, 'UP_ARROW', 'PRESS', shift=True, alt=True)
+    kmi_2_UU.properties.distance = 10
+    kmi_2_UU.properties.backwards = False
+    kmi_2_UU.properties.axis = True
+    
+    kmi_2_D = km_2.keymap_items.new(idname, 'DOWN_ARROW', 'PRESS', alt=True)
+    kmi_2_D.properties.distance = 1
+    kmi_2_D.properties.backwards = True
+    kmi_2_D.properties.axis = True
+    
+    kmi_2_DD = km_2.keymap_items.new(idname, 'DOWN_ARROW', 'PRESS', shift=True, alt=True)
+    kmi_2_DD.properties.distance = 10
+    kmi_2_DD.properties.backwards = True
+    kmi_2_DD.properties.axis = True
+    
+    # 3D View------------------------
+    kmi_3_R = km_3.keymap_items.new(idname, 'RIGHT_ARROW', 'PRESS', alt=True)
+    kmi_3_R.properties.distance = 1
+    kmi_3_R.properties.backwards = False
+    kmi_3_R.properties.axis = False
+    
+    kmi_3_RR = km_3.keymap_items.new(idname, 'RIGHT_ARROW', 'PRESS', shift=True, alt=True)
+    kmi_3_RR.properties.distance = 10
+    kmi_3_RR.properties.backwards = False
+    kmi_3_RR.properties.axis = False
+    
+    kmi_3_L = km_3.keymap_items.new(idname, 'LEFT_ARROW', 'PRESS', alt=True)
+    kmi_3_L.properties.distance = 1
+    kmi_3_L.properties.backwards = True
+    kmi_3_L.properties.axis = False
+    
+    kmi_3_LL = km_3.keymap_items.new(idname, 'LEFT_ARROW', 'PRESS', shift=True, alt=True)
+    kmi_3_LL.properties.distance = 10
+    kmi_3_LL.properties.backwards = True
+    kmi_3_LL.properties.axis = False
+    
+    kmi_3_U = km_3.keymap_items.new(idname, 'UP_ARROW', 'PRESS', alt=True)
+    kmi_3_U.properties.distance = 1
+    kmi_3_U.properties.backwards = False
+    kmi_3_U.properties.axis = True
+    
+    kmi_3_UU = km_3.keymap_items.new(idname, 'UP_ARROW', 'PRESS', shift=True, alt=True)
+    kmi_3_UU.properties.distance = 10
+    kmi_3_UU.properties.backwards = False
+    kmi_3_UU.properties.axis = True
+    
+    kmi_3_D = km_3.keymap_items.new(idname, 'DOWN_ARROW', 'PRESS', alt=True)
+    kmi_3_D.properties.distance = 1
+    kmi_3_D.properties.backwards = True
+    kmi_3_D.properties.axis = True
+    
+    kmi_3_DD = km_3.keymap_items.new(idname, 'DOWN_ARROW', 'PRESS', shift=True, alt=True)
+    kmi_3_DD.properties.distance = 10
+    kmi_3_DD.properties.backwards = True
+    kmi_3_DD.properties.axis = True
     
 
-    addon_keymaps.append((km_1, km_2))
+    addon_keymaps.append((km_1, km_2, km_3))
     
     
 def unregister():
